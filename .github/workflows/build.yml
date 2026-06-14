@@ -1,0 +1,143 @@
+name: Slide build
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Directory to build
+        required: true
+        default: ""
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - "slides/**/*.typ"
+  pull_request:
+    branches: [main]
+    paths:
+      - "slides/**/*.typ"
+jobs:
+  get_directory_name_to_build:
+    name: Get directory name to build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out
+        uses: actions/checkout@v6.0.3
+
+      - name: Get directory name changed before this runs
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          base=${{ github.event.pull_request.base.sha }}
+          head=${{ github.event.pull_request.head.sha }}
+          else
+          base=${{ github.event.before }}
+          head=${{ github.sha }}
+          fi
+          git fetch --no-tags --depth=1 origin "$base" "$head" || true
+          dirs=$(git diff --name-only "$base".."$head" -- 'slides/**/*.typ' \
+          | xargs -r -n1 dirname \
+          | cut -d'/' -f2 \
+          | sort -u)
+          first=$(echo "$dirs" | head -n1 || true)
+          echo "Detect $first"
+          echo "target_directory=$first" >> "$GITHUB_OUTPUT"
+
+      - name: Set target directory if workflow_dispatch
+        if: github.event_name == 'workflow_dispatch'
+        run: echo "target_directory=${{ github.event.inputs.target }}" >> "$GITHUB_OUTPUT"
+
+  build_slide:
+    name: Build Slide
+    runs-on: ubuntu-22.04
+    needs: get_directory_name_to_build
+    outputs:
+      artifact_id: ${{ steps.upload_artifact.outputs.artifact-id }}
+      artifact_url: ${{ steps.upload_artifact.outputs.artifact-url }}
+    env:
+      package_name: ${{ needs.get_directory_name_to_build.outputs.target_directory}}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v6.0.3
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v22
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v14
+
+      - name: Build slide
+        run: |
+          echo "Start build $package_name"
+          nix build .#"$package_name"
+
+      - name: Rename build outputs
+        run: mv result "$package_name.pdf"
+
+      - run: ls
+
+      - name: Upload build result to artifact
+        id: upload_artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: $package_name
+          paths: $package_name.pdf
+
+  upload_release:
+    name: Upload Release
+    runs-on: ubuntu-22.04
+    needs: build_slide
+    if: github.event_name == 'push'
+    steps:
+      - name: Download artifact
+        id: download_artifact
+        env:
+          artifact_id: ${{ needs.build_slide.outputs.artifact_id }}
+        uses: actions/download-artifact@v8.0.1
+        with:
+          artifact-ids: artifact_id
+
+      - name: Make release asset name
+        id: make_release_asset_name
+        run: echo "asset_name=$(basename $asset_path)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release
+        uses: softprops/action-gh-release@v3.0.0
+        env:
+          asset_path: ${{ steps.download_artifact.outputs.download-path }}
+        with:
+          files: $asset_path
+          name: ${{ steps.make_release_asset_name.outputs.asset_name }}
+
+  upload_pull_request:
+    name: Upload build output to pullRequest
+    runs-on: ubuntu-22.04
+    needs: build_slide
+    env:
+      artifact_url: ${{ needs.build_slide.outputs.artifact_url }}
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Download artifact
+        id: download_artifact
+        env:
+          artifact_id: ${{ needs.build_slide.outputs.artifact_id }}
+        uses: actions/download-artifact@v8.0.1
+        with:
+          artifact-ids: artifact_id
+
+      - name: Make asset name
+        id: make_release_asset_name
+        run: echo "asset_name=$(basename $asset_path)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload asset to pull request
+        env:
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_ID: ${{ github.run_id }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BODY="Build artifact for this PR: ${artifact_url}"
+          curl -s -H "Authorization: token ${TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -X POST \
+            -d "{\"body\":\"${BODY}\"}" \
+            "https://api.github.com/repos/${REPO}/issues/${PR_NUMBER}/comments"
