@@ -97,10 +97,12 @@ jobs:
           artifact_id: ${{ needs.build_slide.outputs.artifact_id }}
         uses: actions/download-artifact@v8.0.1
         with:
-          artifact-ids: artifact_id
+          artifact-ids: ${{ env.artifact_id }}
 
       - name: Make release asset name
         id: make_release_asset_name
+        env:
+          asset_path: ${{ steps.download_artifact.outputs.download-path }}
         run: echo "asset_name=$(basename $asset_path)" >> "$GITHUB_OUTPUT"
 
       - name: Upload release
@@ -108,7 +110,7 @@ jobs:
         env:
           asset_path: ${{ steps.download_artifact.outputs.download-path }}
         with:
-          files: $asset_path
+          files: ${{ env.asset_path }}
           name: ${{ steps.make_release_asset_name.outputs.asset_name }}
 
   upload_pull_request:
