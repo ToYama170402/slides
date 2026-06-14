@@ -19,6 +19,8 @@ jobs:
   get_directory_name_to_build:
     name: Get directory name to build
     runs-on: ubuntu-22.04
+    outputs:
+      target_directory: ${{ steps.set_target_directory.outputs.target_directory }}
     steps:
       - name: Check out
         uses: actions/checkout@v6.0.3
@@ -43,6 +45,7 @@ jobs:
           echo "target_directory=$first" >> "$GITHUB_OUTPUT"
 
       - name: Set target directory if workflow_dispatch
+        id: set_target_directory
         if: github.event_name == 'workflow_dispatch'
         run: echo "target_directory=${{ github.event.inputs.target }}" >> "$GITHUB_OUTPUT"
 
@@ -54,7 +57,7 @@ jobs:
       artifact_id: ${{ steps.upload_artifact.outputs.artifact-id }}
       artifact_url: ${{ steps.upload_artifact.outputs.artifact-url }}
     env:
-      package_name: ${{ needs.get_directory_name_to_build.outputs.target_directory}}
+      package_name: ${{ needs.get_directory_name_to_build.outputs.target_directory }}
     steps:
       - name: Check out
         uses: actions/checkout@v6.0.3
