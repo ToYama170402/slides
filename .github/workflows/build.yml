@@ -81,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@v7.0.1
         with:
           name: ${package_name}
-          paths: ${package_name}.pdf
+          path: ${package_name}.pdf
 
   upload_release:
     name: Upload Release
