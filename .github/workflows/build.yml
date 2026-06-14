@@ -74,7 +74,9 @@ jobs:
           nix build .#"${package_name}"
 
       - name: Rename build outputs
-        run: mv result "${package_name}.pdf"
+        run: |
+          mv result "${package_name}.pdf"
+          ls
 
       - name: Upload build result to artifact
         id: upload_artifact
