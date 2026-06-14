@@ -67,20 +67,18 @@ jobs:
 
       - name: Build slide
         run: |
-          echo "Start build $package_name"
-          nix build .#"$package_name"
+          echo "Start build ${package_name}"
+          nix build .#"${package_name}"
 
       - name: Rename build outputs
-        run: mv result "$package_name.pdf"
-
-      - run: ls
+        run: mv result "${package_name}.pdf"
 
       - name: Upload build result to artifact
         id: upload_artifact
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: $package_name
-          paths: $package_name.pdf
+          name: ${package_name}
+          paths: ${package_name}.pdf
 
   upload_release:
     name: Upload Release
