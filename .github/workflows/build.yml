@@ -89,7 +89,7 @@ jobs:
     name: Upload Release
     runs-on: ubuntu-22.04
     needs: build_slide
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Download artifact
         id: download_artifact
