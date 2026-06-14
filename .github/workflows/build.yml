@@ -82,8 +82,8 @@ jobs:
         id: upload_artifact
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: ${package_name}
-          path: ${package_name}.pdf
+          name: ${{ env.package_name }}
+          path: ${{ env.package_name }}.pdf
 
   upload_release:
     name: Upload Release
