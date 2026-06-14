@@ -112,6 +112,7 @@ jobs:
         with:
           files: ${{ env.asset_path }}
           name: ${{ steps.make_release_asset_name.outputs.asset_name }}
+          tag_name: ${{ github.sha }}
 
   upload_pull_request:
     name: Upload build output to pullRequest
