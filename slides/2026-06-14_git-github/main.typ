@@ -480,7 +480,7 @@ GitHubのプロフィールをカスタムする
   )
 
   - HTMLとかLaTeXみたいに、どこかの組織が統一した文法を定義していないので実装依存/方言多数
-  - GitHubのいたるとこのでも書くことが出来る@github_markdown
+  - GitHubのいたるところでも書くことが出来る@github_markdown
   - プレビューはVSCode拡張などで
 ]
 
