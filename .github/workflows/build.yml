@@ -132,7 +132,7 @@ jobs:
           artifact_id: ${{ needs.build_slide.outputs.artifact_id }}
         uses: actions/download-artifact@v8.0.1
         with:
-          artifact-ids: artifact_id
+          artifact-ids: ${{ env.artifact_id}}
 
       - name: Make asset name
         id: make_release_asset_name
